@@ -1,3 +1,45 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run: echo "build"
+
+  test:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run: echo "This is a test step"
+
+  integration:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run: echo "integration"
+
+  zap_baseline:
+    machine: true
+    steps:
+      - checkout
+      - run: |
+          docker pull hysnsec/zap:2.16.1
+          docker run --user root --rm -v $(pwd):/zap/wrk:rw -w /zap hysnsec/zap:2.16.1 zap-baseline.py -t https://prod-4npvboxi.lab.practical-devsecops.training -J zap-output.json || true
+      - store_artifacts:
+          path: zap-output.json
+          destination: zap-artifact
+
+  prod:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run: echo "This is a deploy step"
+
 workflows:
   version: 2
   django:
@@ -16,38 +58,3 @@ workflows:
           type: approval
           requires:
             - zap_baseline
-  test:
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - checkout
-      - run: echo "This is a test step"
-
-    zap_baseline:
-    machine: true
-    steps:
-      - checkout
-
-      - run: |
-          docker pull hysnsec/zap:2.16.1
-          docker run --user root --rm -v $(pwd):/zap/wrk:rw -w /zap hysnsec/zap:2.16.1 zap-baseline.py -t https://prod-4npvboxi.lab.practical-devsecops.training -J zap-output.json || true
-
-      - store_artifacts:
-          path: zap-output.json
-          destination: zap-artifact
-  prod:
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - checkout
-      - run: echo "This is a deploy step"
-
-workflows:
-  version: 2
-  django:
-    jobs:
-      - build
-      - test
-      - integration
-      - prod:
-          type: approval
