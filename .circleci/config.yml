@@ -1,17 +1,28 @@
-jobs:
-  build:
-    docker:
-      - image: cimg/base:stable                   # similar to "image" in GitLab
-    steps:
-      - checkout
-      - run: echo "This is a build step"          # similar to "script" in GitLab
-
+workflows:
+  version: 2
+  django:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - integration:
+          requires:
+            - test
+      - zap_baseline:
+          requires:
+            - integration
+      - prod:
+          type: approval
+          requires:
+            - zap_baseline
   test:
     docker:
       - image: cimg/base:stable
     steps:
       - checkout
       - run: echo "This is a test step"
+
     zap_baseline:
     machine: true
     steps:
@@ -24,14 +35,6 @@ jobs:
       - store_artifacts:
           path: zap-output.json
           destination: zap-artifact
-    steps:
-      - checkout
-      - run:
-          command: |
-            echo "This is an integration step"
-            exit 1
-          when: on_fail                 # Even if the job fails, continue to the next stages
-
   prod:
     docker:
       - image: cimg/base:stable
